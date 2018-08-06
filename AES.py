@@ -13,17 +13,21 @@ def change_to_hex(text):#인자값으로 받은 문자열을 16진수로 변환�
 			
 	return hex_result
 	
-	
+'''
 def Padding(hex_plain):
 	if int(len(hex_plain)/2)%16 != 0: #이과정을 통해서 평문이 16진수 이면서 32의배수인 문자열길이를 만족한다.
 		padding_num = 16 - int(len(hex_plain)/2)%16 #패딩과정에서 X923패딩사용
-		
-		if padding_num >= 10:
-			hex_plain += '00'*(padding_num - 1)+str(padding_num)
-		else:
-			hex_plain += '00'*(padding_num - 1)+'0'+str(padding_num)
-			
+		hex_plain += '00'*(padding_num - 1) + '0' + hex(padding_num)[2:]#padding_num의 범위는 0~15이므로 16진수로 바꾸면 무조건 한자리
+
 	return hex_plain
+'''
+def Padding(hex_plain):
+	if int(len(hex_plain)/2)%16 != 0: #이과정을 통해서 평문이 16진수 이면서 32의배수인 문자열길이를 만족한다.
+		padding_num = 16 - int(len(hex_plain)/2)%16 #패딩과정에서 X923패딩사용
+		hex_plain += '00'*(padding_num)
+
+	return hex_plain
+
 	
 #행렬을 모듈을 쓰지 않고 리스트로 구현할 것이다.
 def make_matrix(hex_text):#4x4행렬을 만들어주는 함수이다.
@@ -93,7 +97,7 @@ def Sub_Bytes_matrix(hex_matrix,block_num):#Sub_Bytes과정도 block_num을 인�
 			 ['cd','0c','13','ec','5f','97','44','17','c4','a7','7e','3d','64','5d','19','73'],
 			 ['60','81','4f','dc','22','2a','90','88','46','ee','b8','14','de','5e','0b','db'],
 			 ['e0','32','3a','0a','49','06','24','5c','c2','d3','ac','62','91','95','e4','79'],
-			 ['e7','c8','37','6d','8d','5d','4e','a9','6c','56','f4','ea','65','7a','ae','08'],
+			 ['e7','c8','37','6d','8d','d5','4e','a9','6c','56','f4','ea','65','7a','ae','08'],
 			 ['ba','78','25','2e','1c','a6','b4','c6','e8','dd','74','1f','4b','bd','8b','8a'],
 			 ['70','3e','b5','66','48','03','f6','0e','61','35','57','b9','86','c1','1d','9e'],
 			 ['e1','f8','98','11','69','d9','8e','94','9b','1e','87','e9','ce','55','28','df'],
@@ -119,7 +123,7 @@ def Shift_Rows(matrix,block_num):				#인자 값으로 4x4 행렬을 받는다. 
 		list_shift(matrix[block_num][row],row) 	#list_shift(matrix[block_num][row],row)
 	return matrix
 
-	
+
 import copy
 
 def Mix_Column(Matrix,block_num):
@@ -174,8 +178,10 @@ def Mix_Column(Matrix,block_num):
 			Result_Matrix[block_num][special_row][column] = Result #matrix에 반복문을 돌면서 나온 결과를 하나씩 꼽아준다.
 		
 	return Result_Matrix
-	
+
 result = Mix_Column([[['d4','e0','b8','1e'],['bf','b4','41','27'],['5d','52','11','98'],['30','ae','f1','e5']]],0)
+print(result)	
+
 
 
 
@@ -248,19 +254,18 @@ def make_Round_key(key_matrix):#키스케줄 알고리즘을 통해 각 라운�
 def main():
 	plaintext = input("평문을 입력해주세요 : ")	#평문을 입력받는다.
 	hex_plain = change_to_hex(plaintext)	#평문을 16진수로 변환
-	hex_plain = Padding(hex_plain)			#평문을 블록크기에 맞게 패딩 해주는 과정
-	plain_matrix = make_matrix(hex_plain)	#4x4 평문 행렬 생성
+	plaintext = Padding(hex_plain)			#평문을 블록크기에 맞게 패딩 해주는 과정
+	plain_matrix = make_matrix(plaintext)	#4x4 평문 행렬 생성
 	
 	key_matrix = make_key_matrix()			#4x4키 행렬 생성
 	
 	Round_key_matrix = make_Round_key(key_matrix)#라운드 키 생성 
-
-	Ciphertext = ''
+	
 	
 	for block_num in range(len(plain_matrix)):
 		XOR_result = matrix_XOR(plain_matrix,key_matrix,block_num)#1라운드에 들어가기전 키 행렬과 평문 행렬을 Xor한다. 이과정에서 수행할 블록의 행렬이 결정
 		
-		for Round in range(9):
+		for Round in range(9):#Round 1 ~ 9
 			block_num = 0											#바로 위의 과정에서 수행할 블록의 행렬이 하나로 결정되었으므로 고정해준다.
 			Sub_Bytes_result = Sub_Bytes_matrix(XOR_result,block_num)
 			Shift_Rows_result = Shift_Rows(Sub_Bytes_result,block_num)
@@ -272,13 +277,8 @@ def main():
 		Sub_Bytes_result = Sub_Bytes_matrix(XOR_result,block_num)
 		Shift_Rows_result = Shift_Rows(Sub_Bytes_result,block_num)
 		XOR_result = matrix_XOR(Shift_Rows_result,Round_key_matrix[Round],block_num)
-		
 		result = XOR_result
-		print(result)
-	
-	print('Plaintext:\t%s '%plaintext)
-	#print('Ciphertext:%s '%result)
-	
+		print('Hex Result :',result)
 	
 	
 	
