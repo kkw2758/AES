@@ -112,7 +112,7 @@ def Sub_Bytes_matrix(hex_matrix,block_num):#Sub_Bytes과정도 block_num을 인�
 	return hex_matrix
 	
 	
-def list_shift(list,shift_num):
+def left_shift(list,shift_num):
 	for x in range(shift_num):
 		val = list.pop(0)
 		list.append(val)
@@ -120,7 +120,7 @@ def list_shift(list,shift_num):
 	
 def Shift_Rows(matrix,block_num):				#인자 값으로 4x4 행렬을 받는다. block_num을 받아야하지? def Shift_Rows(matrix,block_num)
 	for row in range(4):
-		list_shift(matrix[block_num][row],row) 	#list_shift(matrix[block_num][row],row)
+		left_shift(matrix[block_num][row],row) 	#left_shift(matrix[block_num][row],row)
 	return matrix
 
 
@@ -244,24 +244,142 @@ def make_Round_key(key_matrix):#키스케줄 알고리즘을 통해 각 라운�
 		
 	return Round_key_matrix		
 				
-				
+def Right_Shift(list,shift_num):		#암호화 과정의 왼쪽으로 쉬프트와 반대로 오른쪽으로 쉬프트 한다.
+	for x in range(shift_num):
+		last_value = list.pop()
+		list.insert(0,last_value)
+		
 	
+
+def Inv_Shift_Rows(matrix,block_num):				#인자 값으로 4x4 행렬을 받는다.
+	for row in range(4):
+		Right_Shift(matrix[block_num][row],row) 	#각행 마다 쉬프트 값이 다른것을 적용
+	return matrix	
+
+
+def Inv_Sub_Bytes_matrix(hex_matrix,block_num):#Sub_Bytes의 역과정
+	Inverse_S_Box =[['52','09','6a','d5','30','36','a5','38','bf','40','a3','9e','81','f3','d7','fb'],
+					['7c','e3','39','82','9b','2f','ff','87','34','8e','43','44','c4','de','e9','cb'],
+					['54','7b','94','32','a6','c2','23','3d','ee','4c','95','0b','42','fa','c3','4e'],
+					['08','2e','a1','66','28','d9','24','b2','76','5b','a2','49','6d','8b','d1','25'],
+					['72','f8','f6','64','86','68','98','16','d4','a4','5c','cc','5d','65','b6','92'],
+					['6c','70','48','50','fd','ed','b9','da','5e','15','46','57','a7','8d','9d','84'],
+					['90','d8','ab','00','8c','bc','d3','0a','f7','e4','58','05','b8','b3','45','06'],
+					['d0','2c','1e','8f','ca','3f','0f','02','c1','af','bd','03','01','13','8a','6b'],
+					['3a','91','11','41','4f','67','dc','ea','97','f2','cf','ce','f0','b4','e6','73'],
+					['96','ac','74','22','e7','ad','35','85','e2','f9','37','e8','1c','75','df','6e'],
+					['47','f1','1a','71','1d','29','c5','89','6f','b7','62','0e','aa','18','be','1b'],
+					['fc','56','3e','4b','c6','d2','79','20','9a','db','c0','fe','78','cd','5a','f4'],
+					['1f','dd','a8','33','88','07','c7','31','b1','12','10','59','27','80','ec','5f'],
+					['60','51','7f','a9','19','b5','4a','0d','2d','e5','7a','9f','93','c9','9c','ef'],
+					['a0','e0','3b','4d','ae','2a','f5','b0','c8','eb','bb','3c','83','53','99','61'],
+					['17','2b','04','7e','ba','77','d6','26','e1','69','14','63','55','21','0c','7d']]
+	
+	for row in range(len(hex_matrix[0])):
+		for column in range(len(hex_matrix[0][0])):
+			Inverse_S_Box_row = int(hex_matrix[block_num][row][column][0],16)
+			Inverse_S_Box_column = int(hex_matrix[block_num][row][column][1],16)
+			hex_matrix[block_num][row][column] = Inverse_S_Box[Inverse_S_Box_row][Inverse_S_Box_column]
+	
+	return hex_matrix
+	
+	
+#AES에서 *2과정을 담당하는 함수.
+#'쉬프트 하기전의 바이트 = 쉬프트 결과 바이트'가 만족하게 쉬프트 해주는 함수.
+def Safe_Shift(Bin): #인자값으로 길이가 8인 비트열을 받는다.(1바이트)
+	if Bin[0] == '1':#가장 왼쪽의 비트가 1이라면
+		Safe_Shift_value = int(Bin,2) << 1
+		Safe_Shift_value -= 256
+		Result = Safe_Shift_value ^ 0x1b
+	else:			 #가장 오른쪽의 비트가 0이라면
+		Result = int(Bin,2) << 1
+	
+	return Result
+
+
+
+
+import copy
+
+def Inv_Mix_Column(Matrix,block_num):
+	Inv_Mix_Column_matrix = [[14,11,13,9], #Mix Column과정에서 사용할 행렬 선언 리스트 Inv_Mix_Column_matrix[x][y] 에서 x 는 행번호 y는 열번호를 나타낸다.
+							 [9,14,11,13],
+							 [13,9,14,11],
+							 [11,13,9,14]]
+						 
+	Result_Matrix = copy.deepcopy(Matrix)
+	
+	for column in range(4):				#인자값으로 받은 행렬의 열
+		for special_row in range(4):	#특정한 행렬의 행 (Inv_Mix_Column_matrix의 행)
+			Final_Result = 0xFF			#Result값의 초기값을 설정해준다. Xor연산의 성질을 이용하기 위해 초기값을 숫자로 설정해준다.
+
+			
+			for same_index in range(4):	#입력해준 행렬의 열의 몇번째 행의 값인지 알려주는 index = 특정한 행렬의 행에서 몇번 열인지 값인지 알려주는 index  
+				Inv_Mix_Column_value = Inv_Mix_Column_matrix[special_row][same_index]	#Inv_Mix_Column_matrix의 각 행과 열에 대응하는 값을 의미한다.
+				matrix_value = Matrix[block_num][same_index][column]					#인자값으로 받은 행렬의 블록의 번호와 행과 열에 대응하는 값을 의미한다.
+				matrix_value = bin(int(matrix_value,16))[2:]							#16진수를 2진수로 바꿔주는 과정 밑에서 길이가 8인 비트열에 대해 경우가 나뉘기 때문.
+				matrix_value = '0'*(8-len(matrix_value)) + matrix_value					#2진수 값으로 변환한 결과에서 앞의 '0b'를 제외한 값
+				
+				if Inv_Mix_Column_value == 9:#9*x = ((x*2)*2)*2+x
+					Result = Safe_Shift(matrix_value)
+					Result = Safe_Shift('0'*(8-len(bin(Result)[2:])) + bin(Result)[2:])
+					Result = Safe_Shift('0'*(8-len(bin(Result)[2:])) + bin(Result)[2:])
+					Final_Result = Final_Result ^ Result ^ int(matrix_value,2)
+
+				elif Inv_Mix_Column_value == 11:#11*x = (((x*2)*2)+x)*2 +x
+					Result = Safe_Shift(matrix_value)
+					Result = Safe_Shift('0'*(8-len(bin(Result)[2:])) + bin(Result)[2:])
+					Result = Result ^ int(matrix_value,2)
+					Result = Safe_Shift('0'*(8-len(bin(Result)[2:])) + bin(Result)[2:])
+					Final_Result = Final_Result ^ Result ^ int(matrix_value,2)
+	
+				elif Inv_Mix_Column_value == 13:#13*x = ((((x*2)+x)*2)*2)+x
+					Result = Safe_Shift(matrix_value)
+					Result = Result ^ int(matrix_value,2)
+					Result = Safe_Shift('0'*(8-len(bin(Result)[2:])) + bin(Result)[2:])
+					Result = Safe_Shift('0'*(8-len(bin(Result)[2:])) + bin(Result)[2:])
+					Final_Result = Final_Result ^ Result ^ int(matrix_value,2)
+					
+				elif Inv_Mix_Column_value == 14:#14*x = (((x*2)+x)*2+x)*2
+					Result = Safe_Shift(matrix_value)
+					Result = Result ^ int(matrix_value,2)
+					Result = Safe_Shift('0'*(8-len(bin(Result)[2:])) + bin(Result)[2:])
+					Result = Result ^ int(matrix_value,2)
+					Final_Result = Final_Result ^ Safe_Shift('0'*(8-len(bin(Result)[2:])) + bin(Result)[2:])
+						
+			Final_Result = Final_Result ^ 0xFF
+			Final_Result = hex(Final_Result)[2:]
+			if len(Final_Result) == 1:
+				Final_Result = '0' + Final_Result
+			Result_Matrix[block_num][special_row][column] = Final_Result #matrix에 반복문을 돌면서 나온 결과를 하나씩 꼽아준다.
+		
+	return Result_Matrix
+
+
 def main():
-	plaintext = input("평문을 입력해주세요 : ")	#평문을 입력받는다.
+	#암호화 과정 
+	plaintext = input("평문을 입력해주세요 : ")		#평문을 입력받는다.
 	hex_plain = change_to_hex(plaintext)	#평문을 16진수로 변환
 	plaintext = Padding(hex_plain)			#평문을 블록크기에 맞게 패딩 해주는 과정
 	plain_matrix = make_matrix(plaintext)	#4x4 평문 행렬 생성
+	print('Plain_Matrix')
+	for x in range(len(plain_matrix)):
+		print('Block',x+1)
+		for y in plain_matrix[x]:
+			print(y)
 	
-	key_matrix = make_key_matrix()			#4x4키 행렬 생성
+	print('\n')
 	
-	Round_key_matrix = make_Round_key(key_matrix)#라운드 키 생성 
+	key_matrix = make_key_matrix()					#4x4키 행렬 생성
+	Round_key_matrix = make_Round_key(key_matrix)	#라운드 키 생성 
 	
+	ENC_Matrix = []#암호화 결과를 담을 빈 리스트 선언
 	
 	for block_num in range(len(plain_matrix)):
 		XOR_result = matrix_XOR(plain_matrix,key_matrix,block_num)#1라운드에 들어가기전 키 행렬과 평문 행렬을 Xor한다. 이과정에서 수행할 블록의 행렬이 결정
 		
 		for Round in range(9):#Round 1 ~ 9
-			block_num = 0											#바로 위의 과정에서 수행할 블록의 행렬이 하나로 결정되었으므로 고정해준다.
+			block_num = 0	  #바로 위의 과정에서 수행할 블록의 행렬이 하나로 결정되었으므로 고정해준다.
 			Sub_Bytes_result = Sub_Bytes_matrix(XOR_result,block_num)
 			Shift_Rows_result = Shift_Rows(Sub_Bytes_result,block_num)
 			Mix_Column_result = Mix_Column(Shift_Rows_result,block_num)
@@ -269,13 +387,54 @@ def main():
 		
 		Round = 10
 		
+		#Round 10 Mix_Column과정을 생략하고 진행한다.
 		Sub_Bytes_result = Sub_Bytes_matrix(XOR_result,block_num)
 		Shift_Rows_result = Shift_Rows(Sub_Bytes_result,block_num)
 		XOR_result = matrix_XOR(Shift_Rows_result,Round_key_matrix[Round],block_num)
 		result = XOR_result
-		print('Hex Result :',result)
-	
-	
+		ENC_Matrix.append(result[0])#3중 리스트로 표현하기 위한 조치
+		
+	print('\nENC_Matrix')
+	#결과 행렬의 행과 열을 쉽게 볼 수 있도록 해준다.
+	for row in range(len(ENC_Matrix)):
+		print('Block',row+1)
+		for column in ENC_Matrix[row]:
+			print(column)
+
+#================================================================================================================================================================				
+	#복호화 과정
+	DEC_Matrix = []#복호화된 행렬을 받을 리스트를 선언
+	for block_num in range(len(ENC_Matrix)):#복호화 과정에서는 위의 암호화과정의 결과를 이용하여 평문을 만든다.
+		XOR_result = matrix_XOR(ENC_Matrix,Round_key_matrix[10],block_num)#1라운드에 들어가기전(0라운드) 키 행렬과 평문 행렬을 Xor한다. 이과정에서 수행할 블록의 행렬이 결정
+		Round_result = XOR_result	#각 라운드에서의 결과를 받는 변수
+		
+		for Round in range(9):#Inv.Round 1 ~ 9
+			block_num = 0	  #바로 위의 과정에서 수행할 블록의 행렬이 하나로 결정되었으므로 고정해준다.
+			
+			
+			Inv_Shift_Rows_result = Inv_Shift_Rows(Round_result,block_num)
+			Inv_Sub_Bytes_result = Inv_Sub_Bytes_matrix(Inv_Shift_Rows_result,block_num)
+			XOR_result = matrix_XOR(Inv_Sub_Bytes_result,Round_key_matrix[9-Round],block_num)
+			Inv_Mix_Column_result = Inv_Mix_Column(XOR_result,block_num)
+			Round_result = Inv_Mix_Column_result#1~9라운드까지 도는 과정에서 각 라운드의 결과를 다음 라운드에 이용하므로 변수에 저장해서 이용한다.
+			
+		#Final Round -> Round 10 Inv Mix Columns과정을 생략하고 진행	
+		Inv_Shift_Rows_result = Inv_Shift_Rows(Round_result,block_num)
+		Inv_Sub_Bytes_result = Inv_Sub_Bytes_matrix(Inv_Shift_Rows_result,block_num)
+		XOR_result = matrix_XOR(Inv_Sub_Bytes_result,Round_key_matrix[0],block_num)
+		
+		Final_Round_result = XOR_result 		#1~10라운드 과정을 모두 거쳐서 나온 결과를 저장
+
+		DEC_Matrix.append(Final_Round_result[0])#행렬을 리스트로 구현했으므로 1~10라운드를 거쳐서 나온 결과를 리스트에 추가해준다.
+		
+		print('\nDEC_Matrix')
+		#결과 행렬의 행과 열을 쉽게 볼 수 있도록 해준다.
+		for row in range(len(DEC_Matrix)):
+			print('Block',row+1)
+			for column in DEC_Matrix[row]:
+				print(column)
+
 	
 if __name__ == "__main__":
 	main()
+	a = input('')
